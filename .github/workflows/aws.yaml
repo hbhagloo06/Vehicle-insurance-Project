@@ -1,0 +1,75 @@
+name: CI/CD - Build & Deploy to EC2
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: vehicleproj
+  IMAGE_TAG: latest
+  CONTAINER_NAME: vehicleproj-app
+  APP_PORT: "8000"
+
+jobs:
+  ci_build_push:
+    name: Build and Push Docker Image to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          set -e
+          IMAGE="$ECR_REGISTRY/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  cd_deploy:
+    name: Deploy on EC2 (Self-Hosted Runner)
+    needs: ci_build_push
+    runs-on: self-hosted
+
+    steps:
+      - name: Pull and Restart Container
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+        run: |
+          set -e
+
+          # Login to ECR using EC2 IAM role (no access keys needed)
+          aws ecr get-login-password --region "${{ env.AWS_REGION }}" \
+            | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+          IMAGE="$ECR_REGISTRY/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}"
+
+          docker pull "$IMAGE"
+
+          # Stop old container if running
+          docker rm -f "${{ env.CONTAINER_NAME }}" 2>/dev/null || true
+
+          # Run new container
+          docker run -d --restart unless-stopped \
+            --name "${{ env.CONTAINER_NAME }}" \
+            -p "${{ env.APP_PORT }}:${{ env.APP_PORT }}" \
+            "$IMAGE"
+
+          docker ps

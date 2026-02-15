@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vehicle Insurance Response Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+</head>
+
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>Vehicle Insurance Response Predictor</h1>
+      <p class="sub">Fill the form and submit to predict Response.</p>
+    </header>
+
+    <section class="card">
+      <form id="predictForm" method="POST" action="/">
+        <div class="grid">
+
+          <!-- Gender -->
+          <div class="field">
+            <label for="Gender">Gender</label>
+            <select id="Gender" name="Gender" required>
+              <option value="" disabled selected>Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+
+          <!-- Age (slider + number sync) -->
+          <div class="field">
+            <label for="AgeNum">Age <span id="ageValue" class="muted">(30)</span></label>
+            <input id="AgeRange" type="range" min="0" max="100" value="30" />
+            <input id="AgeNum" type="number" min="0" max="100" value="30" required />
+            <!-- Actual field sent -->
+            <input id="Age" name="Age" type="hidden" value="30" />
+          </div>
+
+          <!-- Driving_License UI (Yes/No) -->
+          <div class="field">
+            <label for="Driving_License_ui">Driving License</label>
+            <select id="Driving_License_ui" required>
+              <option value="" disabled selected>Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+            <!-- Field sent to backend (1/0) -->
+            <input type="hidden" id="Driving_License" name="Driving_License" value="" />
+          </div>
+
+          <!-- Region_Code -->
+          <div class="field">
+            <label for="Region_Code">Region Code</label>
+            <input id="Region_Code" name="Region_Code" type="number" step="1" min="0" required placeholder="e.g. 28" />
+          </div>
+
+          <!-- Previously_Insured UI (Yes/No) -->
+          <div class="field">
+            <label for="Previously_Insured_ui">Previously Insured</label>
+            <select id="Previously_Insured_ui" required>
+              <option value="" disabled selected>Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+            <!-- Field sent to backend (1/0) -->
+            <input type="hidden" id="Previously_Insured" name="Previously_Insured" value="" />
+          </div>
+
+          <!-- Vehicle_Age -->
+          <div class="field">
+            <label for="Vehicle_Age">Vehicle Age</label>
+            <select id="Vehicle_Age" name="Vehicle_Age" required>
+              <option value="" disabled selected>Select</option>
+              <option value="&gt; 2 Years">&gt; 2 Years</option>
+              <option value="1-2 Year">1-2 Year</option>
+              <option value="&lt; 1 Year">&lt; 1 Year</option>
+            </select>
+          </div>
+
+          <!-- Vehicle_Damage -->
+          <div class="field">
+            <label for="Vehicle_Damage">Vehicle Damage</label>
+            <select id="Vehicle_Damage" name="Vehicle_Damage" required>
+              <option value="" disabled selected>Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <!-- Annual_Premium -->
+          <div class="field">
+            <label for="Annual_Premium">Annual Premium</label>
+            <input id="Annual_Premium" name="Annual_Premium" type="number" step="0.01" min="0" required placeholder="e.g. 30564.00" />
+          </div>
+
+          <!-- Policy_Sales_Channel -->
+          <div class="field">
+            <label for="Policy_Sales_Channel">Policy Sales Channel</label>
+            <input id="Policy_Sales_Channel" name="Policy_Sales_Channel" type="number" step="1" min="0" required placeholder="e.g. 152" />
+          </div>
+
+          <!-- Vintage -->
+          <div class="field">
+            <label for="Vintage">Vintage</label>
+            <input id="Vintage" name="Vintage" type="number" step="1" min="0" required placeholder="e.g. 165" />
+          </div>
+
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn">Predict</button>
+          <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
+        </div>
+      </form>
+    </section>
+
+<section class="card">
+  <div class="result-head">
+    <h2>Prediction Result</h2>
+    <p class="sub muted">Based on the submitted inputs.</p>
+  </div>
+
+  {% if context and context != "Rendering" %}
+    {% set conf = confidence_score if confidence_score is not none else 0 %}
+    {% set conf_pct = conf * 100 %}
+
+    <div class="result-box {{ 'is-yes' if is_yes else 'is-no' }}">
+      <div class="result-icon" aria-hidden="true">
+        {{ "✓" if is_yes else "✕" }}
+      </div>
+
+      <div class="result-body">
+        <div class="result-title">
+          {{ "Likely to Respond" if is_yes else "Unlikely to Respond" }}
+        </div>
+
+        <div class="result-meta">
+          <span>Prediction:</span>
+          <span class="pill {{ 'pill-yes' if is_yes else 'pill-no' }}">
+            {{ "YES" if is_yes else "NO" }}
+          </span>
+
+          <span class="dot">•</span>
+
+          <span>Confidence:</span>
+          <span class="conf">{{ "%.1f"|format(conf_pct) }}%</span>
+        </div>
+
+        <div class="bar" role="progressbar"
+            aria-valuenow="{{ conf_pct }}" aria-valuemin="0" aria-valuemax="100"
+            style="--p: {{ conf_pct }}%;">
+          <div class="bar-fill"></div>
+        </div>
+
+        <div class="result-raw">
+          Raw label: <span class="mono">{{ context }}</span>
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="result-empty">
+      <div class="result-icon ghost" aria-hidden="true">…</div>
+      <div class="result-body">
+        <div class="result-title">Waiting for submission</div>
+        <div class="result-meta">Fill the form and click <b>Predict</b> to see the outcome.</div>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+
+  </main>
+
+  <script>
+    // ---------- Age: keep slider + number + hidden Age in sync ----------
+    const ageRange = document.getElementById("AgeRange");
+    const ageNum = document.getElementById("AgeNum");
+    const ageHidden = document.getElementById("Age");
+    const ageValue = document.getElementById("ageValue");
+
+    function setAge(v) {
+      const n = Math.max(0, Math.min(100, Number(v || 0)));
+      ageRange.value = n;
+      ageNum.value = n;
+      ageHidden.value = String(n);
+      ageValue.textContent = `(${n})`;
+    }
+    ageRange.addEventListener("input", e => setAge(e.target.value));
+    ageNum.addEventListener("input", e => setAge(e.target.value));
+    setAge(30);
+
+    // ---------- Convert Yes/No -> 1/0 for these two fields ----------
+    const dlUI = document.getElementById("Driving_License_ui");
+    const dlHidden = document.getElementById("Driving_License");
+
+    const piUI = document.getElementById("Previously_Insured_ui");
+    const piHidden = document.getElementById("Previously_Insured");
+
+    function yesNoToBinary(v) {
+      return (String(v).toLowerCase() === "yes") ? "1" : "0";
+    }
+
+    dlUI.addEventListener("change", () => {
+      dlHidden.value = yesNoToBinary(dlUI.value);
+    });
+
+    piUI.addEventListener("change", () => {
+      piHidden.value = yesNoToBinary(piUI.value);
+    });
+
+    // Before submit: ensure hidden fields are set
+    document.getElementById("predictForm").addEventListener("submit", (e) => {
+      if (!dlUI.value || !piUI.value) {
+        e.preventDefault();
+        alert("Please select Driving License and Previously Insured.");
+        return;
+      }
+      dlHidden.value = yesNoToBinary(dlUI.value);
+      piHidden.value = yesNoToBinary(piUI.value);
+      // Age hidden is already synced
+    });
+
+    // Reset
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("predictForm").reset();
+      setAge(30);
+      dlHidden.value = "";
+      piHidden.value = "";
+    });
+  </script>
+</body>
+</html>

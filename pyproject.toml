@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vehicle-insurance"
+version = "0.0.1"
+description = "An MLOps project for productionizing models"
+authors = [{ name = "Hitesh", email = "hbhagloo06@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["vehicle_insurance*"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
